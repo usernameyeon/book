@@ -405,7 +405,9 @@ function renderToday(app){
   const active = items.filter(x => x.p && !x.p.notStarted && !x.p.rest && x.p.amount > 0);
   const rest = items.filter(x => x.p && (x.p.rest || x.p.notStarted));
   const doneN = active.filter(x => x.p.done).length;
-  const leftPages = active.reduce((s,x) => s + Math.max(0, x.p.goal - Math.max(x.p.cur, x.p.base)), 0);
+  const leftBy = {};
+  active.forEach(x => { const u = U(x.b), n = Math.max(0, x.p.goal - Math.max(x.p.cur, x.p.base)); if(n) leftBy[u] = (leftBy[u]||0) + n; });
+  const leftTxt = ['쪽','장','%'].filter(u => leftBy[u]).map(u => u==='%' ? `${leftBy[u]}%p` : u==='장' ? `${leftBy[u]}챕터` : `${leftBy[u]}쪽`).join(' · ');
   const ratio = active.length ? doneN / active.length : 0;
   const st = streak(), rd = readDates();
   const C = 2*Math.PI*28;
@@ -433,7 +435,7 @@ function renderToday(app){
       <b>${doneN}/${active.length}</b></div>
     <div>
       <div class="big">${active.length === 0 ? '오늘은 쉬는 날 ☕' : doneN === active.length ? '오늘 분량 끝! 👏' : `${active.length - doneN}권 남았어요`}</div>
-      <div class="small">${active.length && doneN < active.length ? `남은 분량 약 ${leftPages}쪽` : '꾹 누르면 메모, 톡 누르면 기록'}</div>
+      <div class="small">${active.length && doneN < active.length ? `남은 분량 ${leftTxt}` : '꾹 누르면 메모, 톡 누르면 기록'}</div>
       <div class="week">${week}</div>
     </div>
   </div>`;
@@ -465,7 +467,11 @@ function todayCard(b, p){
   if(p.notStarted){ goalLine = `<span style="color:var(--sub)">${fmtMD(b.startDate)}부터 시작</span>`; }
   else if(p.rest){ goalLine = `<span style="color:var(--sub)">오늘은 쉬는 요일 · 지금 ${fmtPos(b, p.cur)}</span>`; }
   else{
-    goalLine = `<b>${fmtPos(b, p.base)} → ${fmtPos(b, p.goal)}</b><span class="amt">${p.amount}${U(b)==='%'?'%p':U(b)}</span>${p.overdue ? '<span class="badge">기한 지남</span>' : ''}`;
+    const du = n => U(b)==='%' ? `${n}%p` : U(b)==='장' ? `${n}챕터` : `${n}쪽`;
+    const od = p.overdue ? '<span class="badge">기한 지남</span>' : '';
+    if(p.cur >= p.goal) goalLine = `<b>${fmtPos(b, p.cur)}</b><span class="amt">오늘 목표 달성${p.cur > p.goal ? ` (+${du(p.cur-p.goal)})` : ''}</span>`;
+    else if(p.cur > p.base) goalLine = `<b>지금 ${fmtPos(b, p.cur)}</b><span class="amt">목표 ${fmtPos(b, p.goal)} · ${du(p.goal-p.cur)} 남음</span>${od}`;
+    else goalLine = `<b>${fmtPos(b, p.base)} → ${fmtPos(b, p.goal)}</b><span class="amt">오늘 ${du(p.amount)}</span>${od}`;
     segL = p.base/total*100; segW = (p.goal-p.base)/total*100;
   }
   const fillW = Math.min(100, curPos(b)/total*100);
@@ -768,7 +774,7 @@ function renderLibrary(app){
 /* ---------- settings ---------- */
 function openSettings(){
   openSheet(`
-    <h2 class="serif">설정 <span style="font-size:12px;color:var(--faint);font-family:inherit">v4</span></h2>
+    <h2 class="serif">설정 <span style="font-size:12px;color:var(--faint);font-family:inherit">v5</span></h2>
     <label class="f">카카오 REST API 키 (선택)</label>
     <input class="in" id="kk" value="${esc(state.settings.kakaoKey||'')}" placeholder="넣으면 국내 도서 검색이 훨씬 정확해져요" autocomplete="off" autocapitalize="off" spellcheck="false">
     <div class="small-note">키가 없으면 구글 북스로 검색해요. 키 받는 법: <a href="https://developers.kakao.com" target="_blank" rel="noopener">developers.kakao.com</a> → 로그인 → 내 애플리케이션 → 앱 추가 → 앱 키의 <b>REST API 키</b> 복사</div>
