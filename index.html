@@ -274,9 +274,61 @@ const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 const PH = ['#2F5D50','#7A4E3A','#3B4F7A','#8A5A7A','#4F6B3A','#A0652E','#5B5470'];
 function phColor(t){ let h = 0; for(const c of t) h = (h*31 + c.charCodeAt(0)) >>> 0; return PH[h % PH.length]; }
+/* cover: try Kakao thumb → original Daum image → Google Books (by ISBN) → colored card */
+function coverCands(b){
+  const c = [], add = u => { if(u && !c.includes(u)) c.push(u); };
+  if(b.cover){
+    add(b.cover.replace(/^http:/,'https:'));
+    const m = b.cover.match(/[?&]fname=([^&]+)/);
+    if(m){ try{ add(decodeURIComponent(m[1]).replace(/^http:/,'https:')); }catch(e){} }
+  }
+  return c;
+}
 function coverHTML(b){
   const ph = `<div class="ph" style="background:${phColor(b.title||'?')}">${esc((b.title||'').slice(0,24))}</div>`;
-  return `<div class="cover">${ph}${b.cover ? `<img src="${esc(b.cover)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>`;
+  const c = coverCands(b), isbn = esc(b.isbn||'');
+  if(!c.length) return `<div class="cover" data-isbn="${isbn}" data-need="${isbn?1:''}">${ph}</div>`;
+  return `<div class="cover" data-isbn="${isbn}">${ph}<img src="${esc(c[0])}" data-c="${esc(JSON.stringify(c))}" data-ci="0" alt="" referrerpolicy="no-referrer" onerror="coverErr(this)"></div>`;
+}
+function coverErr(img){
+  const c = JSON.parse(img.dataset.c || '[]'), i = +img.dataset.ci + 1;
+  if(i < c.length){ img.dataset.ci = i; img.src = c[i]; return; }
+  const box = img.parentElement; img.remove();
+  if(box && box.dataset.isbn){ box.dataset.need = '1'; hydrateCovers(); }
+}
+const gCoverCache = {};
+let gQueue = [], gActive = 0;
+function googleCover(isbn){
+  if(isbn in gCoverCache) return gCoverCache[isbn];
+  return gCoverCache[isbn] = new Promise(res => { gQueue.push({isbn, res}); pumpG(); });
+}
+function pumpG(){
+  while(gActive < 3 && gQueue.length){
+    const {isbn, res} = gQueue.shift(); gActive++;
+    fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { const il = j && j.items && j.items[0] && j.items[0].volumeInfo.imageLinks;
+        const u = il && (il.thumbnail || il.smallThumbnail); res(u ? u.replace(/^http:/,'https:').replace('&edge=curl','') : null); })
+      .catch(() => res(null))
+      .finally(() => { gActive--; pumpG(); });
+  }
+}
+function hydrateCovers(){
+  document.querySelectorAll('.cover[data-need="1"]').forEach(box => {
+    box.dataset.need = 'busy';
+    const isbn = box.dataset.isbn;
+    googleCover(isbn).then(u => {
+      box.dataset.need = 'done';
+      if(!u || box.querySelector('img')) return;
+      const img = document.createElement('img'); img.alt = ''; img.referrerPolicy = 'no-referrer';
+      img.onerror = () => img.remove(); img.src = u; box.appendChild(img);
+      // remember the working cover for books already on the shelf
+      let changed = false;
+      for(const b of state.books) if(b.isbn === isbn && b.cover !== u){ b.cover = u; changed = true; }
+      for(const r of lastResults) if(r.isbn === isbn) r.cover = u;
+      if(changed) save();
+    });
+  });
 }
 let toastT;
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 1900); }
@@ -320,6 +372,7 @@ function openSheet(html, mount){
   backEl.onclick = () => closeSheet();
   requestAnimationFrame(() => { backEl.classList.add('show'); sheetEl.classList.add('show'); });
   mount && mount(sheetEl);
+  hydrateCovers();
 }
 function closeSheet(instant){
   if(!sheetEl) return;
@@ -341,6 +394,7 @@ function render(){
   else if(tab === 'library') renderLibrary(app);
   else renderAdd(app);
   popId = null;
+  hydrateCovers();
 }
 
 function renderToday(app){
@@ -792,6 +846,7 @@ function drawResults(){
       <button class="addb ${has?'added':''}" data-i="${i}">${has ? '있음' : '추가'}</button></div>`;
   }).join('');
   $$('[data-i]', res).forEach(x => x.onclick = () => openSetup(lastResults[+x.dataset.i], {fromSearch:true}));
+  hydrateCovers();
 }
 async function searchKakao(q){
   const r = await fetch(`https://dapi.kakao.com/v3/search/book?size=30&query=${encodeURIComponent(q)}`, {headers:{Authorization:`KakaoAK ${state.settings.kakaoKey}`}});
