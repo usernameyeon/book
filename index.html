@@ -62,7 +62,7 @@ button{cursor:pointer;border:0;background:none;padding:0}
 .card.done{background:linear-gradient(0deg,#FFFCF6,#FFFCF6)}
 .cover{width:58px;height:84px;flex:none;border-radius:5px 8px 8px 5px;overflow:hidden;background:#E9E1D0;position:relative;
   box-shadow:inset 3px 0 0 rgba(0,0,0,.08),0 2px 6px rgba(40,30,10,.18)}
-.cover img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.cover img{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 .cover .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:6px;text-align:center;
   font-family:"Gowun Batang",serif;font-size:11px;line-height:1.25;color:#fff;font-weight:700;word-break:keep-all}
 .info{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -282,6 +282,7 @@ function coverCands(b){
     const m = b.cover.match(/[?&]fname=([^&]+)/);
     if(m){ try{ add(decodeURIComponent(m[1]).replace(/^http:/,'https:')); }catch(e){} }
   }
+  if(/^97[89]\d{10}$/.test(b.isbn||'')) add(`https://contents.kyobobook.co.kr/sih/fit-in/300x0/pdt/${b.isbn}.jpg`);
   return c;
 }
 function coverHTML(b){
@@ -767,7 +768,7 @@ function renderLibrary(app){
 /* ---------- settings ---------- */
 function openSettings(){
   openSheet(`
-    <h2 class="serif">설정</h2>
+    <h2 class="serif">설정 <span style="font-size:12px;color:var(--faint);font-family:inherit">v4</span></h2>
     <label class="f">카카오 REST API 키 (선택)</label>
     <input class="in" id="kk" value="${esc(state.settings.kakaoKey||'')}" placeholder="넣으면 국내 도서 검색이 훨씬 정확해져요" autocomplete="off" autocapitalize="off" spellcheck="false">
     <div class="small-note">키가 없으면 구글 북스로 검색해요. 키 받는 법: <a href="https://developers.kakao.com" target="_blank" rel="noopener">developers.kakao.com</a> → 로그인 → 내 애플리케이션 → 앱 추가 → 앱 키의 <b>REST API 키</b> 복사</div>
