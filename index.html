@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="책갈피">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F5EFE3">
+<title>책갈피 · 병렬독서</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232F5D50'/><path d='M20 12h24v40l-12-9-12 9z' fill='%23F5EFE3'/></svg>">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5EFE3; --card:#FFFCF6; --ink:#2A2824; --sub:#8C8577; --faint:#B9B1A1;
+  --line:#E7DECC; --accent:#2F5D50; --accent-2:#3E7A69; --accent-soft:#DDE9E3;
+  --warm:#D9704F; --warm-soft:#F8E1D6; --gold:#E2A93B;
+  --r:18px; --shadow:0 1px 2px rgba(60,45,20,.06),0 6px 18px rgba(60,45,20,.06);
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+.serif{font-family:"Gowun Batang",serif}
+#app{max-width:560px;margin:0 auto;padding:calc(var(--safe-t) + 14px) 18px calc(var(--safe-b) + 96px)}
+
+/* header */
+.top{display:flex;align-items:flex-end;justify-content:space-between;margin:6px 2px 16px}
+.top .date{color:var(--sub);font-size:13px;letter-spacing:.02em}
+.top h1{margin:2px 0 0;font-size:25px;font-weight:700;letter-spacing:-.02em}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border-radius:99px;background:var(--card);
+  box-shadow:var(--shadow);font-size:13px;font-weight:600}
+.iconbtn{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--card);box-shadow:var(--shadow)}
+
+/* summary */
+.summary{display:flex;gap:16px;align-items:center;background:var(--accent);color:#F5EFE3;border-radius:22px;padding:16px 18px;margin-bottom:18px;position:relative;overflow:hidden}
+.summary::after{content:"";position:absolute;right:-30px;top:-40px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.06)}
+.ring{width:66px;height:66px;flex:none;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:15px}
+.summary .big{font-size:17px;font-weight:700}
+.summary .small{font-size:13px;opacity:.82;margin-top:2px}
+.week{display:flex;gap:6px;margin-top:9px}
+.week i{width:22px;text-align:center;font-style:normal;font-size:10.5px;opacity:.8}
+.week i::before{content:"";display:block;width:9px;height:9px;margin:0 auto 3px;border-radius:50%;border:1.5px solid rgba(245,239,227,.55)}
+.week i.on::before{background:var(--gold);border-color:var(--gold)}
+.week i.today{opacity:1;font-weight:700}
+
+.sec{display:flex;align-items:center;justify-content:space-between;margin:20px 4px 10px;color:var(--sub);font-size:13px;font-weight:600}
+.sec button{color:var(--sub);font-size:13px}
+
+/* book card */
+.card{display:flex;gap:14px;background:var(--card);border-radius:var(--r);padding:12px;margin-bottom:10px;box-shadow:var(--shadow);
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform .2s ease, box-shadow .2s;position:relative;touch-action:manipulation}
+.card.pressing,.tile.pressing{transform:scale(.965);transition:transform .45s ease}
+.card.done{background:linear-gradient(0deg,#FFFCF6,#FFFCF6)}
+.cover{width:58px;height:84px;flex:none;border-radius:5px 8px 8px 5px;overflow:hidden;background:#E9E1D0;position:relative;
+  box-shadow:inset 3px 0 0 rgba(0,0,0,.08),0 2px 6px rgba(40,30,10,.18)}
+.cover img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.cover .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:6px;text-align:center;
+  font-family:"Gowun Batang",serif;font-size:11px;line-height:1.25;color:#fff;font-weight:700;word-break:keep-all}
+.info{flex:1;min-width:0;display:flex;flex-direction:column}
+.title{font-weight:700;font-size:15.5px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all}
+.author{color:var(--sub);font-size:12.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.goal{margin-top:auto;font-size:13.5px;padding-top:6px}
+.goal b{color:var(--accent);font-size:15px}
+.goal .amt{color:var(--sub);font-size:12px;margin-left:4px}
+.bar{height:6px;border-radius:9px;background:#EEE6D6;margin-top:7px;position:relative;overflow:hidden}
+.bar span{position:absolute;top:0;bottom:0;left:0;border-radius:9px}
+.bar .seg{background:var(--warm-soft);border-left:0}
+.bar .fill{background:var(--accent-2)}
+.check{width:46px;flex:none;display:flex;align-items:center;justify-content:center}
+.check button{width:42px;height:42px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;color:var(--faint);transition:all .2s}
+.card.done .check button{background:var(--accent);border-color:var(--accent);color:#fff;animation:bump .35s ease}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--warm-soft);color:var(--warm);margin-left:6px;vertical-align:2px}
+.rest .card{opacity:.6}
+
+/* pop */
+.pop{animation:pop .7s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes pop{0%{transform:scale(.3) rotate(-6deg);opacity:0}60%{transform:scale(1.05) rotate(1deg);opacity:1}100%{transform:none}}
+@keyframes bump{50%{transform:scale(1.18)}}
+
+/* empty */
+.empty{text-align:center;padding:40px 20px;color:var(--sub)}
+.empty .em{font-size:44px;margin-bottom:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:46px;padding:0 20px;border-radius:14px;background:var(--accent);color:#fff;font-weight:700;font-size:15px}
+.btn.ghost{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.btn.warm{background:var(--warm)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45}
+
+/* library */
+.seg-ctl{display:flex;background:#EAE2D2;border-radius:12px;padding:3px;margin-bottom:14px}
+.seg-ctl button{flex:1;height:34px;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--sub)}
+.seg-ctl button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 12px}
+.tile{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform .2s}
+.tile .cover{width:100%;height:auto;aspect-ratio:2/2.95}
+.tile .cover .ph{font-size:13px}
+.tile .t{font-size:13px;font-weight:600;margin-top:7px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all}
+.tile .p{font-size:11.5px;color:var(--sub);margin-top:2px}
+.tile .bar{height:4px;margin-top:5px}
+.stamp{position:absolute;right:5px;top:5px;background:var(--gold);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px}
+.memo-dot{position:absolute;left:5px;bottom:5px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:1px 6px;border-radius:6px}
+
+/* search */
+.search{display:flex;gap:8px;margin-bottom:8px}
+.search input{flex:1;height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);padding:0 14px;font-size:16px;outline:none}
+.search input:focus{border-color:var(--accent-2)}
+.hint{font-size:12.5px;color:var(--sub);margin:4px 4px 14px}
+.hint a{color:var(--accent)}
+.result{display:flex;gap:12px;align-items:center;background:var(--card);border-radius:16px;padding:10px;margin-bottom:9px;box-shadow:var(--shadow)}
+.result .cover{width:48px;height:70px}
+.result .addb{flex:none;height:36px;padding:0 14px;border-radius:11px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:14px}
+.result .addb.added{background:#EEE6D6;color:var(--sub)}
+.spinner{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:30px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;padding:8px 14px calc(var(--safe-b) + 8px);
+  background:linear-gradient(to top,var(--bg) 60%,rgba(245,239,227,0))}
+.tabbar nav{display:flex;gap:4px;background:var(--ink);border-radius:20px;padding:5px;box-shadow:0 8px 24px rgba(30,25,15,.25)}
+.tabbar button{height:46px;min-width:84px;border-radius:15px;color:#BDB6A8;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px}
+.tabbar button.on{background:var(--bg);color:var(--ink)}
+
+/* sheet */
+.backdrop{position:fixed;inset:0;background:rgba(30,25,15,.38);z-index:40;opacity:0;transition:opacity .25s}
+.backdrop.show{opacity:1}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;max-width:560px;margin:0 auto;background:var(--bg);border-radius:24px 24px 0 0;
+  padding:10px 20px calc(var(--safe-b) + 20px);max-height:90vh;overflow:auto;transform:translateY(100%);transition:transform .32s cubic-bezier(.2,.9,.3,1)}
+.sheet.show{transform:none}
+.grab{width:40px;height:5px;border-radius:9px;background:#D9CFBC;margin:2px auto 14px}
+.sheet h2{margin:0 0 4px;font-size:19px;letter-spacing:-.01em}
+.sheet .head{display:flex;gap:14px;align-items:center;margin-bottom:16px}
+.sheet .head .cover{width:52px;height:76px}
+label.f{display:block;font-size:12.5px;font-weight:600;color:var(--sub);margin:14px 2px 6px}
+.in{width:100%;height:46px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);padding:0 12px;font-size:16px;outline:none}
+.in:focus{border-color:var(--accent-2)}
+textarea.in{height:110px;padding:12px;resize:none;line-height:1.6}
+.row{display:flex;gap:8px;align-items:center}
+.row > *{min-width:0}
+.days{display:flex;gap:5px}
+.days button{flex:1;height:38px;border-radius:10px;background:var(--card);border:1.5px solid var(--line);font-weight:600;font-size:13.5px;color:var(--sub)}
+.days button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.preview{margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--accent-soft);color:var(--accent);font-size:14px;font-weight:600}
+.preview.warn{background:var(--warm-soft);color:var(--warm)}
+.stepper{display:flex;align-items:center;gap:10px;justify-content:center;margin:8px 0 4px}
+.stepper button{width:52px;height:52px;border-radius:16px;background:var(--card);box-shadow:var(--shadow);font-size:22px;font-weight:600}
+.stepper input{width:130px;height:62px;text-align:center;font-size:30px;font-weight:800;border-radius:16px;border:2px solid var(--line);background:var(--card);outline:none}
+.stepper input:focus{border-color:var(--accent-2)}
+.unitlabel{text-align:center;color:var(--sub);font-size:13px}
+.quick{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin:12px 0 16px}
+.quick button{height:34px;padding:0 13px;border-radius:99px;background:var(--card);border:1.5px solid var(--line);font-size:13px;font-weight:600}
+.quick button.main{border-color:var(--accent);color:var(--accent)}
+.links{display:flex;justify-content:center;gap:18px;margin-top:14px}
+.links button{color:var(--sub);font-size:13.5px;font-weight:600;padding:6px}
+.memo{background:var(--card);border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow)}
+.memo p{margin:0;white-space:pre-wrap;word-break:keep-all;line-height:1.6;font-size:14.5px}
+.memo .meta{display:flex;justify-content:space-between;color:var(--sub);font-size:11.5px;margin-top:6px}
+.memo .meta button{color:var(--faint);font-size:12px}
+.stars{display:flex;gap:6px;justify-content:center;margin:10px 0}
+.stars button{font-size:32px;color:#DDD3C0;line-height:1}
+.stars button.on{color:var(--gold)}
+.danger{color:#B4472E !important}
+.small-note{font-size:12px;color:var(--sub);line-height:1.6;margin-top:8px}
+.toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 92px);transform:translate(-50%,20px);background:var(--ink);color:#F5EFE3;
+  padding:11px 16px;border-radius:14px;font-size:14px;font-weight:600;z-index:60;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:70;overflow:hidden}
+.confetti i{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;animation:fall 1.6s ease-in forwards}
+@keyframes fall{to{transform:translateY(105vh) rotate(540deg)}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="tabbar"><nav>
+  <button data-tab="today">📖 오늘</button>
+  <button data-tab="library">📚 서재</button>
+  <button data-tab="add">＋ 책 추가</button>
+</nav></div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* ============ storage ============ */
+const KEY = 'chaekgalpi-v1';
+let state = load();
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s && Array.isArray(s.books)) return Object.assign({settings:{}}, s); }catch(e){}
+  return {books:[], settings:{}};
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ toast('저장 공간에 문제가 있어요'); } }
+
+/* ============ date utils ============ */
+const pad = n => String(n).padStart(2,'0');
+const ds = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const pd = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (s, n) => { const d = pd(s); d.setDate(d.getDate()+n); return ds(d); };
+const today = () => ds(new Date());
+const WD = ['일','월','화','수','목','금','토'];
+const wd = s => pd(s).getDay();
+function readingDaysBetween(from, to, days){ // inclusive
+  if(to < from) return 0;
+  let n = 0, s = from, guard = 0;
+  while(s <= to && guard++ < 4000){ if(days.includes(wd(s))) n++; s = addDays(s,1); }
+  return n;
+}
+const fmtMD = s => { const d = pd(s); return `${d.getMonth()+1}/${d.getDate()}`; };
+
+/* ============ book logic ============ */
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const U = b => b.unit || '쪽';
+const fmtPos = (b, n) => U(b) === '%' ? `${n}%` : `${n}${U(b)}`;
+function curPos(b){ return b.log.length ? b.log[b.log.length-1].p : (b.startPos||0); }
+function posBefore(b, date){
+  let p = b.startPos || 0;
+  for(const e of b.log){ if(e.d < date) p = e.p; else break; }
+  return p;
+}
+function plan(b, date = today()){
+  if(b.status !== 'reading') return null;
+  if(b.startDate && b.startDate > date) return {notStarted:true};
+  const base = posBefore(b, date), total = b.total, remain = Math.max(0, total - base);
+  const isDay = (b.days||[0,1,2,3,4,5,6]).includes(wd(date));
+  let goal, overdue = false, left = null;
+  if(b.mode === 'daily'){
+    goal = base + (b.daily||10);
+  }else{
+    left = readingDaysBetween(date, b.target, b.days);
+    if(b.target < date){ overdue = true; left = 0; }
+    goal = base + Math.ceil(remain / Math.max(1, isDay ? left : left + 1));
+  }
+  goal = Math.min(total, goal);
+  const cur = curPos(b);
+  return {base, goal, amount: goal - base, cur, rest: !isDay, overdue, left, done: cur >= goal && goal > base || cur >= total};
+}
+function setPos(b, p){
+  p = Math.max(0, Math.min(b.total, Math.round(p)));
+  const t = today();
+  const prevDone = curPos(b) >= b.total;
+  const last = b.log[b.log.length-1];
+  if(last && last.d === t) last.p = p; else b.log.push({d:t, p});
+  // drop today's entry if it equals yesterday's position (undo)
+  const L = b.log[b.log.length-1];
+  if(L.d === t && L.p === posBefore(b, t) && b.log.length) { b.log.pop(); }
+  let finished = false;
+  if(p >= b.total && !prevDone){ b.status = 'done'; b.finishedAt = t; finished = true; }
+  save();
+  return finished;
+}
+function readDates(){
+  const set = new Set();
+  for(const b of state.books){
+    let prev = b.startPos || 0;
+    for(const e of b.log){ if(e.p > prev) set.add(e.d); prev = e.p; }
+  }
+  return set;
+}
+function streak(){
+  const set = readDates(); let s = today(), n = 0;
+  if(!set.has(s)) s = addDays(s, -1);
+  while(set.has(s)){ n++; s = addDays(s,-1); }
+  return n;
+}
+
+/* ============ helpers ============ */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const PH = ['#2F5D50','#7A4E3A','#3B4F7A','#8A5A7A','#4F6B3A','#A0652E','#5B5470'];
+function phColor(t){ let h = 0; for(const c of t) h = (h*31 + c.charCodeAt(0)) >>> 0; return PH[h % PH.length]; }
+function coverHTML(b){
+  const ph = `<div class="ph" style="background:${phColor(b.title||'?')}">${esc((b.title||'').slice(0,24))}</div>`;
+  return `<div class="cover">${ph}${b.cover ? `<img src="${esc(b.cover)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>`;
+}
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 1900); }
+function vib(n=12){ try{ navigator.vibrate && navigator.vibrate(n); }catch(e){} }
+function confetti(){
+  const c = document.createElement('div'); c.className = 'confetti';
+  const cols = ['#E2A93B','#D9704F','#2F5D50','#3E7A69','#F5EFE3','#8A5A7A'];
+  for(let i=0;i<70;i++){ const p = document.createElement('i');
+    p.style.left = Math.random()*100+'%'; p.style.background = cols[i%cols.length];
+    p.style.animationDelay = Math.random()*.5+'s'; p.style.animationDuration = 1.2+Math.random()*1+'s'; c.appendChild(p); }
+  document.body.appendChild(c); setTimeout(()=>c.remove(), 2800);
+}
+
+/* long press vs tap */
+function bindPress(el, onTap, onLong){
+  let timer, sx, sy, long = false, moved = false, down = false;
+  el.addEventListener('pointerdown', e => {
+    if(e.button > 0) return;
+    down = true; long = false; moved = false; sx = e.clientX; sy = e.clientY;
+    el.classList.add('pressing');
+    timer = setTimeout(() => { long = true; el.classList.remove('pressing'); vib(15); onLong(e); }, 480);
+  });
+  el.addEventListener('pointermove', e => {
+    if(down && Math.hypot(e.clientX-sx, e.clientY-sy) > 10){ moved = true; clearTimeout(timer); el.classList.remove('pressing'); }
+  });
+  const end = () => { down = false; clearTimeout(timer); el.classList.remove('pressing'); };
+  el.addEventListener('pointerup', e => { const wasDown = down; end(); if(wasDown && !long && !moved) onTap(e); });
+  el.addEventListener('pointercancel', () => { moved = true; end(); });
+  el.addEventListener('pointerleave', end);
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+/* ============ sheet ============ */
+let sheetEl, backEl;
+function openSheet(html, mount){
+  closeSheet(true);
+  backEl = document.createElement('div'); backEl.className = 'backdrop';
+  sheetEl = document.createElement('div'); sheetEl.className = 'sheet';
+  sheetEl.innerHTML = `<div class="grab"></div>` + html;
+  document.body.append(backEl, sheetEl);
+  backEl.onclick = () => closeSheet();
+  requestAnimationFrame(() => { backEl.classList.add('show'); sheetEl.classList.add('show'); });
+  mount && mount(sheetEl);
+}
+function closeSheet(instant){
+  if(!sheetEl) return;
+  const s = sheetEl, b = backEl; sheetEl = backEl = null;
+  if(instant){ s.remove(); b.remove(); return; }
+  s.classList.remove('show'); b.classList.remove('show');
+  setTimeout(() => { s.remove(); b.remove(); }, 300);
+}
+
+/* ============ render ============ */
+let tab = 'today', libFilter = 'reading', popId = null, lastResults = [], lastQuery = '';
+function go(t){ tab = t; render(); window.scrollTo(0,0); }
+$$('.tabbar button').forEach(b => b.onclick = () => go(b.dataset.tab));
+
+function render(){
+  $$('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  const app = $('#app');
+  if(tab === 'today') renderToday(app);
+  else if(tab === 'library') renderLibrary(app);
+  else renderAdd(app);
+  popId = null;
+}
+
+function renderToday(app){
+  const t = today(), d = pd(t);
+  const reading = state.books.filter(b => b.status === 'reading');
+  const items = reading.map(b => ({b, p: plan(b, t)}));
+  const active = items.filter(x => x.p && !x.p.notStarted && !x.p.rest && x.p.amount > 0);
+  const rest = items.filter(x => x.p && (x.p.rest || x.p.notStarted));
+  const doneN = active.filter(x => x.p.done).length;
+  const leftPages = active.reduce((s,x) => s + Math.max(0, x.p.goal - Math.max(x.p.cur, x.p.base)), 0);
+  const ratio = active.length ? doneN / active.length : 0;
+  const st = streak(), rd = readDates();
+  const C = 2*Math.PI*28;
+
+  let week = '';
+  for(let i=6;i>=0;i--){ const s = addDays(t,-i); week += `<i class="${rd.has(s)?'on':''} ${i===0?'today':''}">${WD[wd(s)]}</i>`; }
+
+  let html = `
+  <div class="top">
+    <div><div class="date">${d.getMonth()+1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일</div><h1 class="serif">오늘의 독서</h1></div>
+    <span class="chip">🔥 ${st}일 연속</span>
+  </div>`;
+
+  if(!reading.length){
+    html += `<div class="empty"><div class="em">📚</div><div class="serif" style="font-size:18px;color:var(--ink);margin-bottom:4px">읽고 있는 책이 없어요</div>
+      <div style="margin-bottom:18px">책을 추가하면 매일 읽을 분량을 나눠 드려요</div>
+      <button class="btn" data-go="add">책 추가하기</button></div>`;
+    app.innerHTML = html; $('[data-go]', app).onclick = () => go('add'); return;
+  }
+
+  html += `
+  <div class="summary">
+    <div class="ring"><svg width="66" height="66"><circle cx="33" cy="33" r="28" fill="none" stroke="rgba(245,239,227,.18)" stroke-width="7"/>
+      <circle cx="33" cy="33" r="28" fill="none" stroke="#E2A93B" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-ratio)}" style="transition:stroke-dashoffset .6s"/></svg>
+      <b>${doneN}/${active.length}</b></div>
+    <div>
+      <div class="big">${active.length === 0 ? '오늘은 쉬는 날 ☕' : doneN === active.length ? '오늘 분량 끝! 👏' : `${active.length - doneN}권 남았어요`}</div>
+      <div class="small">${active.length && doneN < active.length ? `남은 분량 약 ${leftPages}쪽` : '꾹 누르면 메모, 톡 누르면 기록'}</div>
+      <div class="week">${week}</div>
+    </div>
+  </div>`;
+
+  if(active.length){
+    html += `<div class="sec"><span>오늘 읽을 책 ${active.length}권</span></div><div id="list">`;
+    for(const {b,p} of active) html += todayCard(b,p);
+    html += `</div>`;
+  }
+  if(rest.length){
+    html += `<div class="sec"><span>오늘은 쉬는 책</span></div><div class="rest">`;
+    for(const {b,p} of rest) html += todayCard(b,p);
+    html += `</div>`;
+  }
+
+  app.innerHTML = html;
+  $$('.card', app).forEach(el => {
+    const b = state.books.find(x => x.id === el.dataset.id);
+    bindPress(el, e => {
+      if(e.target.closest('[data-check]')) quickDone(b);
+      else openRecord(b);
+    }, () => openMemo(b));
+  });
+}
+
+function todayCard(b, p){
+  const total = b.total || 1;
+  let goalLine, segL = 0, segW = 0;
+  if(p.notStarted){ goalLine = `<span style="color:var(--sub)">${fmtMD(b.startDate)}부터 시작</span>`; }
+  else if(p.rest){ goalLine = `<span style="color:var(--sub)">오늘은 쉬는 요일 · 지금 ${fmtPos(b, p.cur)}</span>`; }
+  else{
+    goalLine = `<b>${fmtPos(b, p.base)} → ${fmtPos(b, p.goal)}</b><span class="amt">${p.amount}${U(b)==='%'?'%p':U(b)}</span>${p.overdue ? '<span class="badge">기한 지남</span>' : ''}`;
+    segL = p.base/total*100; segW = (p.goal-p.base)/total*100;
+  }
+  const fillW = Math.min(100, curPos(b)/total*100);
+  const done = p.done && !p.rest && !p.notStarted;
+  return `
+  <div class="card ${done?'done':''} ${popId===b.id?'pop':''}" data-id="${b.id}">
+    ${coverHTML(b)}
+    <div class="info">
+      <div class="title">${esc(b.title)}</div>
+      <div class="author">${esc(b.author||'')}${b.memos?.length ? ` · ✎ ${b.memos.length}` : ''}</div>
+      <div class="goal">${goalLine}</div>
+      <div class="bar"><span class="seg" style="left:${segL}%;width:${segW}%"></span><span class="fill" style="width:${fillW}%"></span></div>
+    </div>
+    ${(!p.rest && !p.notStarted) ? `<div class="check"><button data-check aria-label="오늘 분량 완료"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></div>` : ''}
+  </div>`;
+}
+
+function quickDone(b){
+  const p = plan(b);
+  if(!p) return;
+  if(p.done){ openRecord(b); return; }
+  vib(20);
+  const fin = setPos(b, Math.max(p.goal, curPos(b)));
+  render();
+  if(fin) finishCelebrate(b); else toast(`『${trim(b.title,12)}』 오늘 분량 완료 ✓`);
+}
+const trim = (s,n) => s.length > n ? s.slice(0,n)+'…' : s;
+
+/* ---------- record sheet ---------- */
+function openRecord(b){
+  const p = plan(b) || {};
+  const cur = curPos(b);
+  openSheet(`
+    <div class="head">${coverHTML(b)}<div style="min-width:0"><h2 class="serif">${esc(b.title)}</h2><div class="author">${esc(b.author||'')}</div>
+      <div class="author" style="margin-top:4px">전체 ${fmtPos(b,b.total)} 중 ${fmtPos(b,cur)} (${Math.round(cur/b.total*100)}%)</div></div></div>
+    <div class="unitlabel">어디까지 읽었어요?</div>
+    <div class="stepper"><button data-d="-1">−</button><input id="pos" type="number" inputmode="numeric" value="${cur}"><button data-d="1">+</button></div>
+    <div class="unitlabel">${U(b)==='%' ? '% (전자책 진행률)' : U(b)}</div>
+    <div class="quick">
+      ${p.goal != null && !p.rest && !p.notStarted ? `<button class="main" data-set="${p.goal}">오늘 목표 ${fmtPos(b,p.goal)}</button>` : ''}
+      <button data-add="${U(b)==='쪽'?10:U(b)==='%'?5:1}">+${U(b)==='쪽'?10:U(b)==='%'?5:1}</button>
+      <button data-add="${U(b)==='쪽'?30:U(b)==='%'?10:3}">+${U(b)==='쪽'?30:U(b)==='%'?10:3}</button>
+      <button data-set="${b.total}">끝까지 📕</button>
+    </div>
+    <button class="btn block" id="saveRec">기록하기</button>
+    <div class="links"><button id="toMemo">✎ 메모 (${b.memos?.length||0})</button><button id="toEdit">⚙︎ 책 설정</button></div>
+  `, s => {
+    const inp = $('#pos', s);
+    const clamp = v => Math.max(0, Math.min(b.total, v|0));
+    $$('[data-d]', s).forEach(x => x.onclick = () => { inp.value = clamp(+inp.value + +x.dataset.d); });
+    $$('[data-set]', s).forEach(x => x.onclick = () => { inp.value = x.dataset.set; });
+    $$('[data-add]', s).forEach(x => x.onclick = () => { inp.value = clamp(+inp.value + +x.dataset.add); });
+    $('#saveRec', s).onclick = () => {
+      const fin = setPos(b, clamp(+inp.value));
+      closeSheet(); render();
+      if(fin) finishCelebrate(b); else toast('기록했어요');
+    };
+    $('#toMemo', s).onclick = () => openMemo(b);
+    $('#toEdit', s).onclick = () => openSetup(b, {edit:true});
+  });
+}
+
+/* ---------- memo sheet ---------- */
+function openMemo(b){
+  const list = () => (b.memos||[]).slice().reverse().map(m => `
+    <div class="memo"><p>${esc(m.text)}</p><div class="meta"><span>${m.page!==''&&m.page!=null ? esc(fmtPos(b,m.page))+' · ' : ''}${fmtMD(m.d)}</span><button data-del="${m.id}">삭제</button></div></div>`).join('');
+  openSheet(`
+    <div class="head">${coverHTML(b)}<div style="min-width:0"><h2 class="serif">${esc(b.title)}</h2><div class="author">간단 메모</div></div></div>
+    <textarea class="in" id="memoText" placeholder="기억하고 싶은 문장, 떠오른 생각…"></textarea>
+    <div class="row" style="margin-top:8px">
+      <input class="in" id="memoPage" type="number" inputmode="numeric" style="width:110px" value="${curPos(b)}" placeholder="${U(b)}">
+      <span style="color:var(--sub);font-size:13px">${U(b)}</span>
+      <button class="btn" id="saveMemo" style="margin-left:auto">저장</button>
+    </div>
+    <div style="margin-top:16px" id="memoList">${list()}</div>
+  `, s => {
+    const ta = $('#memoText', s);
+    setTimeout(() => ta.focus(), 350);
+    const bindDel = () => $$('[data-del]', s).forEach(x => x.onclick = () => {
+      b.memos = b.memos.filter(m => m.id !== x.dataset.del); save();
+      $('#memoList', s).innerHTML = list(); bindDel(); render();
+    });
+    bindDel();
+    $('#saveMemo', s).onclick = () => {
+      const text = ta.value.trim(); if(!text){ ta.focus(); return; }
+      const pg = $('#memoPage', s).value;
+      (b.memos ||= []).push({id: uid(), text, page: pg === '' ? '' : +pg, d: today()});
+      save(); ta.value = ''; $('#memoList', s).innerHTML = list(); bindDel(); render(); toast('메모 저장 ✎');
+    };
+  });
+}
+
+/* ---------- finish ---------- */
+function finishCelebrate(b){
+  confetti(); vib([30,40,30]);
+  let rating = b.rating || 0;
+  openSheet(`
+    <div style="text-align:center">
+      <div style="display:flex;justify-content:center;margin:4px 0 10px"><div class="pop" style="width:96px">${coverHTML(b).replace('class="cover"','class="cover" style="width:96px;height:140px"')}</div></div>
+      <h2 class="serif">완독 축하해요! 🎉</h2>
+      <div class="author">『${esc(b.title)}』 ${b.log.length ? `${daysTaken(b)}일 만에` : ''}</div>
+      <div class="stars">${[1,2,3,4,5].map(i => `<button data-star="${i}" class="${i<=rating?'on':''}">★</button>`).join('')}</div>
+      <input class="in" id="oneline" placeholder="한 줄 평 (선택)" value="${esc(b.review||'')}">
+      <button class="btn block" id="okFin" style="margin-top:12px">저장</button>
+    </div>`, s => {
+    $$('[data-star]', s).forEach(x => x.onclick = () => { rating = +x.dataset.star; $$('[data-star]', s).forEach(y => y.classList.toggle('on', +y.dataset.star <= rating)); });
+    $('#okFin', s).onclick = () => { b.rating = rating; b.review = $('#oneline', s).value.trim(); save(); closeSheet(); render(); };
+  });
+}
+function daysTaken(b){
+  const start = b.startDate || (b.log[0] && b.log[0].d) || today();
+  return Math.round((pd(b.finishedAt || today()) - pd(start)) / 864e5) + 1;
+}
+
+/* ---------- setup / edit ---------- */
+function openSetup(src, {edit = false, fromSearch = false} = {}){
+  const t = today();
+  const d = edit ? src : {
+    title: src.title, author: src.author, publisher: src.publisher, cover: src.cover, isbn: src.isbn,
+    total: src.pages || '', unit: '쪽', startPos: 0, mode: 'date', target: addDays(t, 13), daily: 20,
+    days: [0,1,2,3,4,5,6], startDate: t
+  };
+  let mode = d.mode, days = [...(d.days||[0,1,2,3,4,5,6])], unit = d.unit || '쪽';
+  let tgt = d.target || addDays(t, 13), dly = d.daily || 20;
+  const origStatus = d.status;
+  const cur = edit ? curPos(src) : 0;
+  openSheet(`
+    <div class="head">${coverHTML(d)}<div style="min-width:0"><h2 class="serif">${edit ? '책 설정' : '읽기 계획 세우기'}</h2>
+      ${edit ? `<input class="in" id="sTitle" value="${esc(d.title)}" style="height:38px;margin-top:4px;font-size:14px">` : `<div class="title" style="font-weight:600;font-size:14px">${esc(d.title)}</div><div class="author">${esc(d.author||'')}</div>`}
+    </div></div>
+
+    <label class="f">전체 분량</label>
+    <div class="row">
+      <input class="in" id="sTotal" type="number" inputmode="numeric" value="${unit==='%'?100:esc(d.total)}" placeholder="예: 320" ${unit==='%'?'disabled':''}>
+      <div class="seg-ctl" style="margin:0;flex:none;width:170px" id="unitCtl">
+        ${['쪽','장','%'].map(u => `<button data-u="${u}" class="${u===unit?'on':''}">${u==='장'?'챕터':u}</button>`).join('')}
+      </div>
+    </div>
+    <div class="small-note" id="pagesNote">${!edit && !src.pages ? '쪽수는 책 뒷면이나 서점 사이트에서 확인해 넣어 주세요. 전자책이면 %를 고르세요.' : ''}</div>
+
+    ${edit ? `<label class="f">현재 위치</label><input class="in" id="sCur" type="number" inputmode="numeric" value="${cur}">` :
+      `<label class="f">이미 읽은 곳 (처음이면 0)</label><input class="in" id="sStart" type="number" inputmode="numeric" value="0">`}
+
+    <label class="f">분량 나누는 방식</label>
+    <div class="seg-ctl" id="modeCtl" style="margin:0">
+      <button data-m="date" class="${mode==='date'?'on':''}">목표일까지 끝내기</button>
+      <button data-m="daily" class="${mode==='daily'?'on':''}">하루 정해진 양</button>
+    </div>
+    <div id="modeBox" style="margin-top:10px"></div>
+
+    <label class="f">읽는 요일</label>
+    <div class="days" id="daysCtl">${[1,2,3,4,5,6,0].map(i => `<button data-w="${i}" class="${days.includes(i)?'on':''}">${WD[i]}</button>`).join('')}</div>
+
+    ${edit ? `<label class="f">상태</label>
+      <div class="seg-ctl" id="statCtl" style="margin:0">${[['reading','읽는 중'],['paused','잠시 멈춤'],['done','다 읽음']].map(([k,v]) => `<button data-s="${k}" class="${d.status===k?'on':''}">${v}</button>`).join('')}</div>` : ''}
+
+    <div class="preview" id="pv"></div>
+    <button class="btn block" id="sSave" style="margin-top:14px">${edit ? '저장' : '서재에 꽂기 📚'}</button>
+    ${edit ? `<div class="links"><button id="sMemo">✎ 메모</button><button id="sDel" class="danger">책 삭제</button></div>` : ''}
+  `, s => {
+    let status = d.status || 'reading';
+    const modeBox = $('#modeBox', s);
+    const drawMode = () => {
+      modeBox.innerHTML = mode === 'date'
+        ? `<div class="row"><input class="in" id="sTarget" type="date" value="${tgt}" min="${t}"><span style="flex:none;color:var(--sub);font-size:13px">까지</span></div>
+           <div class="quick" style="justify-content:flex-start;margin:8px 0 0">${[[7,'1주'],[14,'2주'],[30,'한 달']].map(([n,l]) => `<button data-plus="${n}">${l}</button>`).join('')}</div>`
+        : `<div class="row"><span style="flex:none;color:var(--sub);font-size:14px">하루</span><input class="in" id="sDaily" type="number" inputmode="numeric" value="${dly}"><span id="dUnit" style="flex:none;color:var(--sub);font-size:14px">${unit==='장'?'챕터':unit}씩</span></div>`;
+      $$('[data-plus]', modeBox).forEach(x => x.onclick = () => { $('#sTarget', s).value = addDays(t, +x.dataset.plus - 1); upd(); });
+      $$('input', modeBox).forEach(i => i.oninput = upd);
+    };
+    const val = id => { const e = $('#'+id, s); return e ? e.value : ''; };
+    const upd = () => {
+      if(mode === 'date' && val('sTarget')) tgt = val('sTarget');
+      if(mode === 'daily' && val('sDaily')) dly = +val('sDaily');
+      const total = unit === '%' ? 100 : +val('sTotal');
+      const pos = edit ? +val('sCur') : +val('sStart');
+      const pv = $('#pv', s);
+      const remain = total - pos;
+      pv.classList.remove('warn');
+      if(!total || total <= 0){ pv.textContent = '전체 분량을 입력해 주세요'; pv.classList.add('warn'); return; }
+      if(!days.length){ pv.textContent = '읽는 요일을 하나 이상 골라 주세요'; pv.classList.add('warn'); return; }
+      if(remain <= 0){ pv.textContent = '이미 다 읽은 책이에요 📕'; return; }
+      const u = unit === '%' ? '%p' : unit === '장' ? '챕터' : '쪽';
+      if(mode === 'date'){
+        const tg = val('sTarget'); if(!tg){ pv.textContent = '목표일을 골라 주세요'; pv.classList.add('warn'); return; }
+        const n = readingDaysBetween(t, tg, days);
+        if(n <= 0){ pv.textContent = '목표일까지 읽는 날이 없어요'; pv.classList.add('warn'); return; }
+        const per = Math.ceil(remain / n);
+        pv.innerHTML = `하루 약 <b>${per}${u}</b>씩 · 읽는 날 ${n}일`;
+        if(per > 80 && unit === '쪽') pv.classList.add('warn');
+      }else{
+        const dl = +val('sDaily') || 1;
+        const need = Math.ceil(remain / dl);
+        let s2 = t, c = 0, g = 0; while(c < need && g++ < 4000){ if(days.includes(wd(s2))) c++; if(c < need) s2 = addDays(s2,1); }
+        pv.innerHTML = `${need}번 읽으면 끝 · 예상 완독 <b>${fmtMD(s2)}</b>`;
+      }
+    };
+    drawMode(); upd();
+    $$('#unitCtl button', s).forEach(x => x.onclick = () => {
+      unit = x.dataset.u; $$('#unitCtl button', s).forEach(y => y.classList.toggle('on', y === x));
+      const tot = $('#sTotal', s);
+      if(unit === '%'){ tot.value = 100; tot.disabled = true; } else { tot.disabled = false; if(tot.value === '100' && !d.total) tot.value = ''; }
+      drawMode(); upd();
+    });
+    $$('#modeCtl button', s).forEach(x => x.onclick = () => { mode = x.dataset.m; $$('#modeCtl button', s).forEach(y => y.classList.toggle('on', y === x)); drawMode(); upd(); });
+    $$('#daysCtl button', s).forEach(x => x.onclick = () => {
+      const w = +x.dataset.w; days = days.includes(w) ? days.filter(v => v !== w) : [...days, w];
+      x.classList.toggle('on', days.includes(w)); upd();
+    });
+    $$('#statCtl button', s).forEach(x => x.onclick = () => { status = x.dataset.s; $$('#statCtl button', s).forEach(y => y.classList.toggle('on', y === x)); });
+    ['sTotal','sStart','sCur'].forEach(id => { const e = $('#'+id, s); if(e) e.oninput = upd; });
+
+    // Kakao results have no page count → try Google Books by ISBN
+    if(fromSearch && !src.pages && src.isbn){
+      lookupPages(src.isbn).then(n => {
+        const tot = $('#sTotal', s);
+        if(n && tot && !tot.value && unit === '쪽'){ tot.value = n; $('#pagesNote', s).textContent = `쪽수 ${n}쪽을 찾아 넣었어요 (판본에 따라 다를 수 있어요)`; upd(); }
+      });
+    }
+
+    $('#sSave', s).onclick = () => {
+      const total = unit === '%' ? 100 : Math.round(+val('sTotal'));
+      if(!total || total <= 0){ toast('전체 분량을 입력해 주세요'); $('#sTotal', s).focus(); return; }
+      if(!days.length){ toast('읽는 요일을 골라 주세요'); return; }
+      if(mode === 'date' && !val('sTarget')){ toast('목표일을 골라 주세요'); return; }
+      if(edit){
+        const b = src;
+        b.title = val('sTitle').trim() || b.title;
+        b.total = total; b.unit = unit; b.mode = mode; b.days = days;
+        if(mode === 'date') b.target = val('sTarget'); else b.daily = Math.max(1, +val('sDaily')||1);
+        const newCur = Math.max(0, Math.min(total, Math.round(+val('sCur'))));
+        let fin = false;
+        if(newCur !== curPos(b)) fin = setPos(b, newCur);
+        if(status !== origStatus){ b.status = status; if(status === 'done' && !b.finishedAt) b.finishedAt = today(); if(status !== 'done') delete b.finishedAt; }
+        save(); closeSheet(); render();
+        if(fin && b.status === 'done') finishCelebrate(b); else toast('저장했어요');
+      }else{
+        const b = {
+          id: uid(), title: d.title, author: d.author || '', publisher: d.publisher || '', cover: d.cover || '', isbn: d.isbn || '',
+          total, unit, mode, days, startDate: t, startPos: Math.max(0, Math.min(total, Math.round(+val('sStart')||0))),
+          target: mode === 'date' ? val('sTarget') : null, daily: mode === 'daily' ? Math.max(1, +val('sDaily')||1) : 20,
+          status: 'reading', log: [], memos: [], addedAt: t
+        };
+        state.books.unshift(b); save();
+        popId = b.id; closeSheet(); vib(20);
+        tab = 'today'; render(); window.scrollTo(0,0);
+        toast('뿅! 서재에 꽂았어요 📚');
+      }
+    };
+    if(edit){
+      $('#sMemo', s).onclick = () => openMemo(src);
+      const del = $('#sDel', s); let armed = false;
+      del.onclick = () => {
+        if(!armed){ armed = true; del.textContent = '한 번 더 누르면 삭제돼요'; setTimeout(() => { armed = false; del.textContent = '책 삭제'; }, 3000); return; }
+        state.books = state.books.filter(x => x.id !== src.id); save(); closeSheet(); render(); toast('삭제했어요');
+      };
+    }
+  });
+}
+
+/* ---------- library ---------- */
+function renderLibrary(app){
+  const counts = {reading:0, paused:0, done:0};
+  state.books.forEach(b => counts[b.status] = (counts[b.status]||0) + 1);
+  const list = state.books.filter(b => libFilter === 'all' || b.status === libFilter)
+    .sort((a,b) => libFilter === 'done' ? (b.finishedAt||'').localeCompare(a.finishedAt||'') : 0);
+  const year = today().slice(0,4);
+  const doneYear = state.books.filter(b => b.status === 'done' && (b.finishedAt||'').startsWith(year)).length;
+  let html = `
+  <div class="top">
+    <div><div class="date">${year}년 완독 ${doneYear}권</div><h1 class="serif">나의 서재</h1></div>
+    <button class="iconbtn" id="gear" aria-label="설정">⚙︎</button>
+  </div>
+  <div class="seg-ctl">
+    ${[['reading','읽는 중'],['paused','멈춤'],['done','다 읽음'],['all','전체']].map(([k,v]) => `<button data-f="${k}" class="${libFilter===k?'on':''}">${v}${k!=='all'?` ${counts[k]||0}`:''}</button>`).join('')}
+  </div>`;
+  if(!list.length){
+    html += `<div class="empty"><div class="em">🪴</div>${libFilter==='done' ? '아직 완독한 책이 없어요' : libFilter==='paused' ? '멈춘 책이 없어요' : '책이 없어요'}</div>`;
+  }else{
+    html += `<div class="grid">` + list.map(b => {
+      const pct = Math.round(curPos(b)/b.total*100);
+      return `<div class="tile ${popId===b.id?'pop':''}" data-id="${b.id}">
+        <div style="position:relative">${coverHTML(b)}${b.status==='done' ? `<span class="stamp">${b.rating ? '★'.repeat(b.rating) : '완독'}</span>` : ''}${b.memos?.length ? `<span class="memo-dot">✎ ${b.memos.length}</span>` : ''}</div>
+        <div class="t">${esc(b.title)}</div>
+        <div class="p">${b.status==='done' ? (b.finishedAt ? fmtMD(b.finishedAt)+' 완독' : '완독') : b.status==='paused' ? `멈춤 · ${pct}%` : `${pct}%`}</div>
+        ${b.status!=='done' ? `<div class="bar"><span class="fill" style="width:${pct}%"></span></div>` : ''}
+      </div>`;
+    }).join('') + `</div>`;
+    html += `<div class="small-note" style="text-align:center;margin-top:22px">톡 누르면 설정 · 꾹 누르면 메모</div>`;
+  }
+  app.innerHTML = html;
+  $$('[data-f]', app).forEach(x => x.onclick = () => { libFilter = x.dataset.f; render(); });
+  $$('.tile', app).forEach(el => {
+    const b = state.books.find(x => x.id === el.dataset.id);
+    bindPress(el, () => openSetup(b, {edit:true}), () => openMemo(b));
+  });
+  $('#gear', app).onclick = openSettings;
+}
+
+/* ---------- settings ---------- */
+function openSettings(){
+  openSheet(`
+    <h2 class="serif">설정</h2>
+    <label class="f">카카오 REST API 키 (선택)</label>
+    <input class="in" id="kk" value="${esc(state.settings.kakaoKey||'')}" placeholder="넣으면 국내 도서 검색이 훨씬 정확해져요" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="small-note">키가 없으면 구글 북스로 검색해요. 키 받는 법: <a href="https://developers.kakao.com" target="_blank" rel="noopener">developers.kakao.com</a> → 로그인 → 내 애플리케이션 → 앱 추가 → 앱 키의 <b>REST API 키</b> 복사</div>
+    <button class="btn block" id="kkSave" style="margin-top:12px">키 저장</button>
+
+    <label class="f" style="margin-top:24px">백업 · 옮기기</label>
+    <div class="small-note" style="margin-top:0">기록은 이 기기 브라우저에 저장돼요. 다른 기기로 옮기거나 백업하려면 아래 코드를 복사해 두세요.</div>
+    <div class="row" style="margin-top:8px"><button class="btn ghost" id="copyB" style="flex:1">백업 코드 복사</button><button class="btn ghost" id="dlB" style="flex:1">파일로 저장</button></div>
+    <textarea class="in" id="impT" placeholder="백업 코드를 여기에 붙여넣기" style="margin-top:10px;height:80px;font-size:12px"></textarea>
+    <button class="btn ghost block" id="impB" style="margin-top:8px">붙여넣은 백업 불러오기</button>
+  `, s => {
+    $('#kkSave', s).onclick = () => { state.settings.kakaoKey = $('#kk', s).value.trim(); save(); toast('저장했어요'); closeSheet(); };
+    $('#copyB', s).onclick = async () => {
+      const txt = JSON.stringify(state);
+      try{ await navigator.clipboard.writeText(txt); toast('복사했어요'); }
+      catch(e){ $('#impT', s).value = txt; $('#impT', s).select(); toast('아래 칸의 코드를 직접 복사해 주세요'); }
+    };
+    $('#dlB', s).onclick = () => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(state,null,1)], {type:'application/json'}));
+      a.download = `책갈피-백업-${today()}.json`; a.click();
+    };
+    $('#impB', s).onclick = () => {
+      try{
+        const o = JSON.parse($('#impT', s).value);
+        if(!o || !Array.isArray(o.books)) throw 0;
+        state = Object.assign({settings:{}}, o); save(); closeSheet(); render(); toast(`${o.books.length}권 불러왔어요`);
+      }catch(e){ toast('백업 코드가 올바르지 않아요'); }
+    };
+  });
+}
+
+/* ---------- add / search ---------- */
+function renderAdd(app){
+  app.innerHTML = `
+  <div class="top"><div><div class="date">제목·저자로 찾기</div><h1 class="serif">책 추가</h1></div></div>
+  <form class="search" id="sf"><input id="q" type="search" placeholder="예: 데미안, 한강" value="${esc(lastQuery)}" enterkeyhint="search" autocomplete="off"><button class="btn" style="height:48px">검색</button></form>
+  <div class="hint">${state.settings.kakaoKey ? '카카오(다음) 책 검색 사용 중' : '구글 북스로 검색 중 · 국내 책이 잘 안 나오면 <a href="#" id="toSet">카카오 키 넣기</a>'} · <a href="#" id="manual">직접 입력</a></div>
+  <div id="res"></div>`;
+  $('#sf', app).onsubmit = e => { e.preventDefault(); doSearch($('#q', app).value.trim()); $('#q', app).blur(); };
+  const ts = $('#toSet', app); if(ts) ts.onclick = e => { e.preventDefault(); openSettings(); };
+  $('#manual', app).onclick = e => { e.preventDefault(); openManual(); };
+  if(lastResults.length) drawResults(); else if(!lastQuery) setTimeout(() => $('#q', app)?.focus(), 50);
+}
+function openManual(){
+  openSheet(`<h2 class="serif">직접 입력</h2>
+    <label class="f">제목</label><input class="in" id="mT">
+    <label class="f">저자 (선택)</label><input class="in" id="mA">
+    <button class="btn block" id="mGo" style="margin-top:16px">다음</button>`, s => {
+    setTimeout(() => $('#mT', s).focus(), 350);
+    $('#mGo', s).onclick = () => { const t = $('#mT', s).value.trim(); if(!t) return; openSetup({title:t, author:$('#mA', s).value.trim()}); };
+  });
+}
+async function doSearch(q){
+  if(!q) return;
+  lastQuery = q;
+  const res = $('#res'); res.innerHTML = `<div class="spinner"></div>`;
+  try{
+    lastResults = state.settings.kakaoKey ? await searchKakao(q) : await searchGoogle(q);
+    drawResults();
+  }catch(err){
+    const net = err instanceof TypeError; // Load failed / Failed to fetch
+    const msg = net ? '인터넷 검색이 막혀 있어요.<br>Claude 앱 미리보기에서는 검색이 안 되고,<br>사이트 주소로 열어야 돼요.' : esc(err.message || '검색에 실패했어요');
+    res.innerHTML = `<div class="empty">${msg}<br><br><button class="btn ghost" id="mm">직접 입력하기</button></div>`;
+    $('#mm').onclick = openManual;
+  }
+}
+function drawResults(){
+  const res = $('#res'); if(!res) return;
+  if(!lastResults.length){ res.innerHTML = `<div class="empty">검색 결과가 없어요<br><br><button class="btn ghost" id="mm">직접 입력하기</button></div>`; $('#mm').onclick = openManual; return; }
+  res.innerHTML = lastResults.map((r,i) => {
+    const has = state.books.some(b => (r.isbn && b.isbn === r.isbn) || (b.title === r.title && b.author === r.author));
+    return `<div class="result">${coverHTML(r)}<div class="info" style="justify-content:center"><div class="title" style="font-size:14.5px">${esc(r.title)}</div>
+      <div class="author">${esc([r.author, r.publisher].filter(Boolean).join(' · '))}</div>
+      ${r.pages ? `<div class="author">${r.pages}쪽</div>` : ''}</div>
+      <button class="addb ${has?'added':''}" data-i="${i}">${has ? '있음' : '추가'}</button></div>`;
+  }).join('');
+  $$('[data-i]', res).forEach(x => x.onclick = () => openSetup(lastResults[+x.dataset.i], {fromSearch:true}));
+}
+async function searchKakao(q){
+  const r = await fetch(`https://dapi.kakao.com/v3/search/book?size=30&query=${encodeURIComponent(q)}`, {headers:{Authorization:`KakaoAK ${state.settings.kakaoKey}`}});
+  if(r.status === 401 || r.status === 403) throw new Error('카카오 키를 확인해 주세요 (REST API 키인지, 앱이 활성 상태인지)');
+  if(!r.ok) throw new Error('카카오 검색에 실패했어요 ('+r.status+')');
+  const j = await r.json();
+  return (j.documents||[]).map(d => ({
+    title: d.title, author: (d.authors||[]).join(', '), publisher: d.publisher,
+    cover: d.thumbnail ? d.thumbnail.replace(/^http:/,'https:') : '', isbn: (d.isbn||'').trim().split(/\s+/).pop(), pages: null
+  }));
+}
+async function searchGoogle(q){
+  const r = await fetch(`https://www.googleapis.com/books/v1/volumes?maxResults=30&printType=books&q=${encodeURIComponent(q)}`);
+  if(r.status === 429) throw new Error('구글 검색 한도에 걸렸어요. 잠시 뒤 다시 해 보거나 카카오 키를 넣어 주세요');
+  if(!r.ok) throw new Error('검색에 실패했어요 ('+r.status+')');
+  const j = await r.json();
+  return (j.items||[]).map(gMap);
+}
+function gMap(it){
+  const v = it.volumeInfo || {};
+  const img = (v.imageLinks && (v.imageLinks.thumbnail || v.imageLinks.smallThumbnail)) || '';
+  const isbn = (v.industryIdentifiers||[]).find(x => x.type === 'ISBN_13') || (v.industryIdentifiers||[])[0];
+  return {
+    title: v.title + (v.subtitle ? ` : ${v.subtitle}` : ''), author: (v.authors||[]).join(', '), publisher: v.publisher || '',
+    cover: img.replace(/^http:/,'https:').replace('&edge=curl',''), isbn: isbn ? isbn.identifier : '', pages: v.pageCount || null
+  };
+}
+async function lookupPages(isbn){
+  try{
+    const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`);
+    if(!r.ok) return null;
+    const j = await r.json();
+    return j.items && j.items[0] && j.items[0].volumeInfo && j.items[0].volumeInfo.pageCount || null;
+  }catch(e){ return null; }
+}
+
+/* refresh when the day changes (app left open overnight) */
+let dayNow = today();
+document.addEventListener('visibilitychange', () => { if(!document.hidden && today() !== dayNow){ dayNow = today(); render(); } });
+
+render();
+</script>
+</body>
+</html>
